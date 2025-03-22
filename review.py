@@ -21,6 +21,8 @@ def create_pull_request(user, head_branch, base_branch, git_token):
     }
 
     title, description, sha = get_commit_message()
+    subprocess.check_output(["git", "push", "--force", "origin", "HEAD"])
+
     git_commits_api = "https://api.github.com/repos/{0}/{1}/commits/{2}/pulls".format(
         project_name,
         repo_name,
@@ -88,13 +90,13 @@ def get_git_branch(path = None):
 
 def get_commit_message():
     '''Parses the first local commit message that have not been pushed remotely yet.'''
-    res = subprocess.check_output(["git", "log", "origin/main..HEAD"]).decode("utf-8").split("\n")
+    # TODO: replace hardcoded dev with target branch
+    res = subprocess.check_output(["git", "log", "origin/dev..HEAD"]).decode("utf-8").split("\n")
     title = ""
     description = ""
-    sha = ""
+    sha = subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode('ascii').strip()
     title_parsed = False
 
-    line_count = 0
     for line in res[4:]:
         message = line.lstrip()
         if not title_parsed:
@@ -105,9 +107,6 @@ def get_commit_message():
         else:
             if not message:
                 break
-            if line_count == 0:
-                sha = message.split()[-1]
-                line_count += 1
             description += message + "\n"
     
     return title, description, sha
@@ -171,7 +170,7 @@ if __name__ == "__main__":
         is_new_pull_request = create_pull_request(
             conf[0], # current user
             get_git_branch(), # head_branch
-            "main", # base_branch TODO: change to automatically detect base branch
+            "dev", # base_branch TODO: change to automatically detect base branch
             conf[1], # git_token
         )
         if not is_new_pull_request:
